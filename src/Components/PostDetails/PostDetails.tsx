@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Card, CardActionArea, CardActions, CardContent, CardMedia, Grid, Typography } from '@mui/material';
+import { Box, Button, Card, CardActionArea, CardActions, CardContent, CardMedia, Grid, List, ListItem, ListItemText, TextField, Typography } from '@mui/material';
 import { Container } from '@mui/system';
 import BookmarkBorderSharpIcon from '@mui/icons-material/BookmarkBorderSharp';
+import EditIcon from '@mui/icons-material/Edit';
 
 type MyType = {
     id: number;
@@ -26,29 +27,128 @@ export function PostDetails(props: {posts: MyType[]; idPost: number; setShowDeta
   
     const [post, setPost] = useState<MyType>();
     const [comments, setComments] = useState<typeComments[]>([]);
+    const [newComment, setNewComment] = useState<boolean>(false);
+    const [addNewUser, setAddNewUser] = useState<string>('');
+    const [addNewComment, setAddNewComment] = useState<string>('');
+    const [editing, setEditing] = useState<number>(0);
+    const [editComment, setEditComment] = useState<string>('');
 
     useEffect(() => {
         setPost(
             props.posts.find(p => {return p.id === props.idPost})
         );
-      },[props.posts, props.idPost]);
-      
-    useEffect(() => {
         fetch('http://localhost:9000/posts/' + props.idPost + '/comments')
           .then((response) => response.json())
           .then((data) => {
             setComments(data.sort((a: any, b: any) => a.date > b.date ? -1 : 1));
           });
-    },[props.idPost]);
+      },[props.posts, props.idPost]);
 
-return (
+    const onBack = () => {
+      props.setShowDetails(false);
+    };
+
+    const addComment = () => {
+      setNewComment(false);
+      fetch('http://localhost:9000/posts/' + props.idPost + '/comments', {
+        method: 'POST',
+        body: '{user: ' + addNewUser + ', content: ' + addNewComment + '}'
+      })
+      .then((response) => response.json())
+      .then((data) => console.log(data));
+    };
+
+    const changeComment = (id: number) => {
+      setEditing(id);
+      fetch('http://localhost:9000/posts/' + props.idPost + '/comments', {
+        method: 'PUT',
+        body: '{content: ' + editComment + '}'
+      })
+      .then((response) => response.json())
+      .then((data) => console.log(data));
+    };
+
+  return (
     <>
-        {post && <Container maxWidth="lg" style={{ paddingTop: 3 }}>
-        <Typography variant="h4" style={{ fontWeight: 800, paddingBottom: 30 }}>
-            {post.title}
-        </Typography>
-        </Container>
-        }
+      {post && 
+        <div>
+          <Container maxWidth="lg" style={{ paddingTop: 3 }}>
+            <Typography variant="h4" style={{ fontWeight: 800, paddingBottom: 30, textAlign: 'center' }}>
+                {post.title}
+            </Typography>
+            <Button variant="outlined" onClick={() => onBack()}>Back</Button>
+            <br />
+            <br />
+            <Typography gutterBottom variant="h5" component="h2">
+              {post.description}
+            </Typography>
+            <Typography variant="body2" color="textSecondary" component="p" dangerouslySetInnerHTML={{__html: post.content}}>
+            </Typography>
+            <Box ml={2}>
+              <Typography variant="subtitle2" component="p">
+                  {post.author}
+              </Typography>
+              <Typography variant="subtitle2" color="textSecondary" component="p">
+                  {post.publish_date}
+              </Typography>
+            </Box>
+          </Container>
+          <br />
+          <br />
+          <Container maxWidth="lg" style={{ paddingTop: 3 }}>
+            <Typography gutterBottom variant="h4" component="h2">
+              Comments
+            </Typography>
+            <List sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}>
+              {comments.map(c => {
+                return (
+                  <ListItem alignItems="flex-start">
+                    <ListItemText
+                      primary={c.user}
+                      secondary={
+                        <React.Fragment>
+                          
+                            <Typography
+                              sx={{ display: 'inline' }}
+                              component="span"
+                              variant="body2"
+                              color="text.primary"
+                            >
+                              {c.date}
+                            </Typography>
+                            {editing !== c.id ?
+                            <>
+                              {" — " + c.content}
+                              <EditIcon onClick={() => {
+                                setEditing(c.id);
+                                setEditComment(c.content);
+                                }}></EditIcon>
+                            </>
+                            :
+                            <>
+                              <TextField id="outlined-basic" label="Comment" value={editComment} variant="outlined" onChange={(event) => setEditComment(event.target.value)}/>
+                              <Button variant="contained" onClick={() => changeComment(c.id)}>Save</Button>
+                            </>
+                            }
+                        </React.Fragment>
+                      }
+                    />
+                  </ListItem>
+                )
+              })}
+            </List>
+            {newComment ?
+              <div>
+                <TextField id="outlined-basic" label="User" variant="outlined" onChange={(event) => setAddNewUser(event.target.value)}/>
+                <TextField id="outlined-basic" label="Comment" variant="outlined" onChange={(event) => setAddNewComment(event.target.value)}/>
+                <Button variant="contained" onClick={() => addComment()}>Add Comment</Button>
+              </div>
+              :
+              <Button variant="contained" onClick={() => setNewComment(true)}>New Comment</Button>
+            }
+          </Container>
+        </div>
+      }
     </>
   );
 }

@@ -28,9 +28,11 @@ function App() {
   },[]);
 
   return (
-    <div className="App">
+    <div>
       {!showDetails ?
-        <FrontPage posts={posts} setIdPost={setIdPost} setShowDetails={setShowDetails} />
+        <div className="App">
+          <FrontPage posts={posts} setIdPost={setIdPost} setShowDetails={setShowDetails} />
+        </div>
       :
         <PostDetails posts={posts} idPost={idPost} setShowDetails={setShowDetails} />
       }
