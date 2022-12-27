@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Button, Card, CardActionArea, CardActions, CardContent, CardMedia, Grid, List, ListItem, ListItemText, TextField, Typography } from '@mui/material';
+import { Box, Button, List, ListItem, ListItemText, TextField, Typography } from '@mui/material';
 import { Container } from '@mui/system';
-import BookmarkBorderSharpIcon from '@mui/icons-material/BookmarkBorderSharp';
 import EditIcon from '@mui/icons-material/Edit';
 
 type MyType = {
@@ -32,6 +31,7 @@ export function PostDetails(props: {posts: MyType[]; idPost: number; setShowDeta
     const [addNewComment, setAddNewComment] = useState<string>('');
     const [editing, setEditing] = useState<number>(0);
     const [editComment, setEditComment] = useState<string>('');
+    const [addedComment, setAddedComment] = useState<typeComments>();
 
     useEffect(() => {
         setPost(
@@ -49,23 +49,55 @@ export function PostDetails(props: {posts: MyType[]; idPost: number; setShowDeta
     };
 
     const addComment = () => {
-      setNewComment(false);
+      const newComment = {
+        "postId": props.idPost, 
+        "parent_id": null, 
+        "user": addNewUser, 
+        "date": new Date().toLocaleString().substring(0, 10), 
+        "content": addNewComment
+      };
       fetch('http://localhost:9000/posts/' + props.idPost + '/comments', {
         method: 'POST',
-        body: '{user: ' + addNewUser + ', content: ' + addNewComment + '}'
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newComment)
       })
       .then((response) => response.json())
-      .then((data) => console.log(data));
+      .then((data) => {
+        let helperArray = comments;
+        helperArray.push(data);
+        setComments(helperArray);
+        setNewComment(false);
+      });
     };
 
-    const changeComment = (id: number) => {
-      setEditing(id);
-      fetch('http://localhost:9000/posts/' + props.idPost + '/comments', {
+    const changeComment = (comment: typeComments) => {
+      setEditing(0);
+      const updateComment = {
+        "id": comment.id,
+        "postId": comment.postId, 
+        "parent_id": comment.parent_id, 
+        "user": comment.user, 
+        "date": new Date().toLocaleString().substring(0, 10), 
+        "content": editComment
+      };
+      fetch('http://localhost:9000/comments/' + comment.id, {
         method: 'PUT',
-        body: '{content: ' + editComment + '}'
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updateComment)
       })
       .then((response) => response.json())
       .then((data) => console.log(data));
+      const helperArray = comments.map(c => {
+        if (c.id === comment.id) {
+          return updateComment;
+        }
+        return c;
+      });
+      setComments(helperArray);
     };
 
   return (
@@ -114,11 +146,11 @@ export function PostDetails(props: {posts: MyType[]; idPost: number; setShowDeta
                               variant="body2"
                               color="text.primary"
                             >
-                              {c.date}
+                              {c.date + " — "}
                             </Typography>
                             {editing !== c.id ?
                             <>
-                              {" — " + c.content}
+                              {c.content}
                               <EditIcon onClick={() => {
                                 setEditing(c.id);
                                 setEditComment(c.content);
@@ -127,7 +159,7 @@ export function PostDetails(props: {posts: MyType[]; idPost: number; setShowDeta
                             :
                             <>
                               <TextField id="outlined-basic" label="Comment" value={editComment} variant="outlined" onChange={(event) => setEditComment(event.target.value)}/>
-                              <Button variant="contained" onClick={() => changeComment(c.id)}>Save</Button>
+                              <Button variant="contained" onClick={() => changeComment(c)}>Save</Button>
                             </>
                             }
                         </React.Fragment>
@@ -141,7 +173,9 @@ export function PostDetails(props: {posts: MyType[]; idPost: number; setShowDeta
               <div>
                 <TextField id="outlined-basic" label="User" variant="outlined" onChange={(event) => setAddNewUser(event.target.value)}/>
                 <TextField id="outlined-basic" label="Comment" variant="outlined" onChange={(event) => setAddNewComment(event.target.value)}/>
+                <br />
                 <Button variant="contained" onClick={() => addComment()}>Add Comment</Button>
+                <Button variant="outlined" onClick={() => setNewComment(false)}>Cancel</Button>
               </div>
               :
               <Button variant="contained" onClick={() => setNewComment(true)}>New Comment</Button>
